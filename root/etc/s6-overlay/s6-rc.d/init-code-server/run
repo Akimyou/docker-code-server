@@ -17,6 +17,15 @@ if [ -n "${SUDO_PASSWORD}" ] || [ -n "${SUDO_PASSWORD_HASH}" ]; then
     fi
 fi
 
-# permissions
-chown -R abc:abc \
-    /config
+[[ ! -f /config/.bashrc ]] && \
+    cp /root/.bashrc /config/.bashrc
+[[ ! -f /config/.profile ]] && \
+    cp /root/.profile /config/.profile
+
+# fix permissions (ignore contents of /config/workspace)
+find /config -path /config/workspace -prune -o -exec chown abc:abc {} +
+chown abc:abc /config/workspace
+chmod 700 /config/.ssh
+if [ -n "$(ls -A /config/.ssh)" ]; then
+    chmod 600 /config/.ssh/*
+fi

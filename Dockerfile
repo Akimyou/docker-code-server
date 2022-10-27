@@ -1,4 +1,4 @@
-FROM ghcr.io/linuxserver/baseimage-ubuntu:bionic
+FROM ghcr.io/linuxserver/baseimage-ubuntu:jammy
 
 # set version label
 ARG BUILD_DATE
@@ -8,36 +8,20 @@ LABEL build_version="Linuxserver.io version:- ${VERSION} Build-date:- ${BUILD_DA
 LABEL maintainer="aptalca"
 
 # environment settings
+ARG DEBIAN_FRONTEND="noninteractive"
 ENV HOME="/config"
 
 RUN \
-  echo "**** install node repo ****" && \
-  apt-get update && \
-  apt-get install -y \
-    gnupg && \
-  curl -s https://deb.nodesource.com/gpgkey/nodesource.gpg.key | apt-key add - && \
-  echo 'deb https://deb.nodesource.com/node_14.x bionic main' \
-    > /etc/apt/sources.list.d/nodesource.list && \
-  curl -s https://dl.yarnpkg.com/debian/pubkey.gpg | apt-key add - && \
-  echo 'deb https://dl.yarnpkg.com/debian/ stable main' \
-    > /etc/apt/sources.list.d/yarn.list && \
-  echo "**** install build dependencies ****" && \
-  apt-get update && \
-  apt-get install -y \
-    build-essential \
-    libx11-dev \
-    libxkbfile-dev \
-    libsecret-1-dev \
-    pkg-config && \
   echo "**** install runtime dependencies ****" && \
+  apt-get update && \
   apt-get install -y \
     git \
     jq \
+    libatomic1 \
     nano \
     net-tools \
-    nodejs \
-    sudo \
-    yarn && \
+    netcat \
+    sudo && \
   echo "**** install addtional pkgs ****" && \
   apt-get install -y \
     openssh-server \
@@ -50,22 +34,19 @@ RUN \
   sh -c "$(curl -fsSL https://raw.github.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" && \
   echo "**** install code-server ****" && \
   if [ -z ${CODE_RELEASE+x} ]; then \
-    CODE_RELEASE=$(curl -sX GET https://registry.yarnpkg.com/code-server \
-    | jq -r '."dist-tags".latest' | sed 's|^|v|'); \
+    CODE_RELEASE=$(curl -sX GET https://api.github.com/repos/coder/code-server/releases/latest \
+      | awk '/tag_name/{print $4;exit}' FS='[""]' | sed 's|^v||'); \
   fi && \
-  CODE_VERSION=$(echo "$CODE_RELEASE" | awk '{print substr($1,2); }') && \
-  yarn config set network-timeout 600000 -g && \
-  yarn --production --verbose --frozen-lockfile global add code-server@"$CODE_VERSION" && \
-  yarn cache clean && \
+  mkdir -p /app/code-server && \
+  curl -o \
+    /tmp/code-server.tar.gz -L \
+    "https://github.com/coder/code-server/releases/download/v${CODE_RELEASE}/code-server-${CODE_RELEASE}-linux-amd64.tar.gz" && \
+  tar xf /tmp/code-server.tar.gz -C \
+    /app/code-server --strip-components=1 && \
   echo "**** clean up ****" && \
-  apt-get purge --auto-remove -y \
-    build-essential \
-    libx11-dev \
-    libxkbfile-dev \
-    libsecret-1-dev \
-    pkg-config && \
   apt-get clean && \
   rm -rf \
+    /config/* \
     /tmp/* \
     /var/lib/apt/lists/* \
     /var/tmp/*
