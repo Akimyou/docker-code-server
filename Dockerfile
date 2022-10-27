@@ -38,6 +38,16 @@ RUN \
     nodejs \
     sudo \
     yarn && \
+  echo "**** install addtional pkgs ****" && \
+  apt-get install -y \
+    openssh-server \
+    zsh && \
+  echo "**** install nvm ****" && \
+  curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.38.0/install.sh | bash && \
+  nvm install 14 && \
+  nvm alias default 14 && \
+  echo "**** install oh-my-zsh ****" && \
+  sh -c "$(curl -fsSL https://raw.github.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" && \
   echo "**** install code-server ****" && \
   if [ -z ${CODE_RELEASE+x} ]; then \
     CODE_RELEASE=$(curl -sX GET https://registry.yarnpkg.com/code-server \
